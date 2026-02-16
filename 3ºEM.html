@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AvaliaSESI 3º Ano - Painel Interativo de Estudo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- 
+         Background: #FAFAF9 (Stone 50)
+         Card Background: #FFFFFF (White)
+         Text Primary: #44403C (Stone 700)
+         Text Secondary: #78716C (Stone 500)
+         Accent Primary: #D97706 (Amber 600) - For Actions/Highlights
+         Accent Secondary: #57534E (Stone 600) - For UI Elements
+         Chart Colors: Muted Earth Tones
+    -->
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        stone: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            300: '#d6d3d1',
+                            400: '#a8a29e',
+                            500: '#78716c',
+                            600: '#57534e',
+                            700: '#44403c',
+                            800: '#292524',
+                            900: '#1c1917',
+                        },
+                        amber: {
+                            600: '#d97706',
+                            700: '#b45309',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e; 
+        }
+
+        /* Chart Container Styling Requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px; /* Max width to prevent stretching */
+            height: 300px; /* Base height */
+            max-height: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .tab-active {
+            background-color: #d97706; /* Amber 600 */
+            color: white;
+        }
+        .tab-inactive {
+            background-color: white;
+            color: #57534E; /* Stone 600 */
+        }
+        .tab-inactive:hover {
+            background-color: #f5f5f4; /* Stone 100 */
+        }
+    </style>
+    
+    <!-- Application Structure Plan: 
+         Structure: A single-page dashboard with a sidebar navigation (desktop) / top bar (mobile).
+         Sections:
+         1. Home/Overview: Introduction, Key Concepts Summary (Cards), and Study Tips.
+         2. Financial Math: Calculators for Successive Increases/Discounts and Interest Comparison Chart (Visualizing Linear vs Exponential).
+         3. Functions: Interactive Quadratic Explorer (Sliders for a, b, c affecting a graph) to visualize Vertex and Concavity.
+         4. Polynomials: Briot-Ruffini Interactive Tool to practice degree reduction logic.
+         5. Geometry: Area Calculator Hub for different shapes mentioned in the report.
+         
+         Why this structure? 
+         It breaks down the dense mathematical content into interactive "labs". Instead of just reading formulas, the user manipulates parameters to see results, fostering active recall and deeper understanding of the relationships (e.g., how 'a' affects the parabola).
+    -->
+
+    <!-- Visualization & Content Choices:
+         1. Financial: Line Chart (Chart.js) to compare Simple (Linear) vs Compound (Exponential) interest. 
+            Goal: Visualize the difference in growth rates over time.
+         2. Functions: Scatter/Line Chart (Chart.js) for plotting the parabola based on user input. 
+            Goal: Immediate visual feedback on how coefficients change the graph shape and vertex position.
+         3. Geometry: Dynamic HTML/CSS shapes (Canvas drawing if complex) updated via JS inputs. 
+            Goal: Visual confirmation of area calculations.
+         4. Polynomials: Interactive HTML Grid table for Briot-Ruffini. 
+            Goal: Step-by-step procedural practice.
+         
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+</head>
+<body class="bg-stone-50 text-stone-700 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Mobile Navigation -->
+    <nav class="md:hidden bg-white shadow-sm p-4 flex justify-between items-center z-10">
+        <h1 class="text-lg font-bold text-amber-600">AvaliaSESI 3º Ano</h1>
+        <button id="mobile-menu-btn" class="text-stone-600 hover:text-amber-600 focus:outline-none">
+            <span class="text-2xl">&#9776;</span>
+        </button>
+    </nav>
+    <div id="mobile-menu" class="hidden absolute top-14 left-0 w-full bg-white shadow-lg z-20 md:hidden flex-col border-t border-stone-100">
+        <button onclick="switchTab('home')" class="p-4 text-left border-b border-stone-100 hover:bg-stone-50">Início</button>
+        <button onclick="switchTab('financeira')" class="p-4 text-left border-b border-stone-100 hover:bg-stone-50">Mat. Financeira</button>
+        <button onclick="switchTab('funcoes')" class="p-4 text-left border-b border-stone-100 hover:bg-stone-50">Funções</button>
+        <button onclick="switchTab('polinomios')" class="p-4 text-left border-b border-stone-100 hover:bg-stone-50">Polinômios</button>
+        <button onclick="switchTab('geometria')" class="p-4 text-left hover:bg-stone-50">Geometria</button>
+    </div>
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden md:flex flex-col w-64 bg-white border-r border-stone-200 h-full shadow-sm">
+        <div class="p-6 border-b border-stone-100">
+            <h1 class="text-xl font-bold text-amber-600">AvaliaSESI <span class="text-stone-400 text-sm block font-normal">Revisão 3º Ano</span></h1>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-2">
+            <button onclick="switchTab('home')" id="btn-home" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors font-medium tab-active">
+                🏠 Visão Geral
+            </button>
+            <button onclick="switchTab('financeira')" id="btn-financeira" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors font-medium tab-inactive">
+                💰 Mat. Financeira
+            </button>
+            <button onclick="switchTab('funcoes')" id="btn-funcoes" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors font-medium tab-inactive">
+                📈 Funções de 2º Grau
+            </button>
+            <button onclick="switchTab('polinomios')" id="btn-polinomios" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors font-medium tab-inactive">
+                ➗ Polinômios
+            </button>
+            <button onclick="switchTab('geometria')" id="btn-geometria" class="nav-btn w-full text-left px-4 py-3 rounded-lg transition-colors font-medium tab-inactive">
+                📐 Geometria Plana
+            </button>
+        </nav>
+        <div class="p-4 border-t border-stone-100 text-xs text-stone-400">
+            Preparação para 22/04
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 h-full overflow-y-auto p-4 md:p-8" id="main-content">
+        
+        <!-- SECTION: HOME -->
+        <section id="sec-home" class="space-y-6 animate-fade-in">
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-stone-100">
+                <h2 class="text-3xl font-bold text-stone-800 mb-2">Olá, Estudante!</h2>
+                <p class="text-stone-600 text-lg">Este é o seu painel interativo para a revisão da AvaliaSESI. Explore os tópicos abaixo para simular cálculos, visualizar gráficos e consolidar os conceitos chave.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-amber-600 hover:shadow-md transition-shadow cursor-pointer" onclick="switchTab('financeira')">
+                    <h3 class="font-bold text-stone-800">Financeira</h3>
+                    <p class="text-sm text-stone-500 mt-1">Juros compostos, aumentos sucessivos e proporções.</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-shadow cursor-pointer" onclick="switchTab('funcoes')">
+                    <h3 class="font-bold text-stone-800">Funções</h3>
+                    <p class="text-sm text-stone-500 mt-1">Parábolas, vértices, raízes e função lucro.</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-emerald-500 hover:shadow-md transition-shadow cursor-pointer" onclick="switchTab('polinomios')">
+                    <h3 class="font-bold text-stone-800">Polinômios</h3>
+                    <p class="text-sm text-stone-500 mt-1">Briot-Ruffini e redução de grau.</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-purple-500 hover:shadow-md transition-shadow cursor-pointer" onclick="switchTab('geometria')">
+                    <h3 class="font-bold text-stone-800">Geometria</h3>
+                    <p class="text-sm text-stone-500 mt-1">Áreas de figuras planas e volumes.</p>
+                </div>
+            </div>
+
+            <div class="bg-stone-100 p-6 rounded-xl border border-stone-200">
+                <h3 class="font-bold text-stone-700 mb-3 flex items-center">💡 Dicas Rápidas de Estudo</h3>
+                <ul class="space-y-2 text-stone-600 list-disc list-inside">
+                    <li><strong>Aumentos Sucessivos:</strong> Nunca some as taxas! Multiplique os fatores $(1+i)$.</li>
+                    <li><strong>Vértice da Parábola:</strong> O $X_v$ diz "quando" acontece o máximo/mínimo. O $Y_v$ diz "qual" é esse valor.</li>
+                    <li><strong>Áreas Compostas:</strong> Divida figuras estranhas em triângulos e retângulos conhecidos.</li>
+                    <li><strong>Conversão:</strong> Lembre-se que $1 m^3 = 1000$ litros.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION: FINANCEIRA -->
+        <section id="sec-financeira" class="hidden space-y-6">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-stone-800">Matemática Financeira</h2>
+                <p class="text-stone-500">Explore o poder dos juros compostos e entenda variações sucessivas.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Aumentos Sucessivos Calculator -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                    <h3 class="font-bold text-lg mb-4 text-amber-600 border-b border-stone-100 pb-2">Simulador de Aumentos/Descontos Sucessivos</h3>
+                    <p class="text-sm text-stone-500 mb-4">Adicione variações percentuais para ver o efeito cumulativo real.</p>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <input type="number" id="fin-value" placeholder="Valor Inicial (R$)" class="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-amber-600 outline-none">
+                    </div>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <select id="fin-type" class="p-2 border rounded-lg bg-stone-50">
+                            <option value="increase">Aumento (+)</option>
+                            <option value="discount">Desconto (-)</option>
+                        </select>
+                        <input type="number" id="fin-percent" placeholder="%" class="w-20 p-2 border rounded-lg">
+                        <button onclick="addVariation()" class="bg-stone-700 text-white px-4 py-2 rounded-lg hover:bg-stone-800 transition">Adicionar</button>
+                    </div>
+
+                    <div id="variation-list" class="mb-4 space-y-2 text-sm text-stone-600 min-h-[50px] bg-stone-50 p-3 rounded-lg">
+                        <!-- Dynamic List -->
+                        <p class="text-stone-400 italic">Nenhuma variação adicionada.</p>
+                    </div>
+
+                    <div class="bg-amber-50 p-4 rounded-lg border border-amber-100">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-stone-600">Valor Final:</span>
+                            <span id="fin-result-val" class="font-bold text-xl text-stone-800">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-stone-600">Variação Total Real:</span>
+                            <span id="fin-result-perc" class="font-bold text-amber-600">0%</span>
+                        </div>
+                    </div>
+                    <button onclick="resetFinance()" class="mt-4 text-xs text-stone-400 hover:text-stone-600 underline">Limpar tudo</button>
+                </div>
+
+                <!-- Juros Simples vs Compostos Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                    <h3 class="font-bold text-lg mb-4 text-amber-600 border-b border-stone-100 pb-2">Juros Simples vs. Compostos</h3>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <div>
+                            <label class="text-xs text-stone-500">Capital</label>
+                            <input type="number" id="chart-cap" value="1000" class="w-full p-1 border rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-stone-500">Taxa (% a.m.)</label>
+                            <input type="number" id="chart-rate" value="10" class="w-full p-1 border rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-stone-500">Meses</label>
+                            <input type="number" id="chart-time" value="12" class="w-full p-1 border rounded text-sm">
+                        </div>
+                    </div>
+                    <button onclick="updateInterestChart()" class="w-full bg-stone-100 text-stone-600 py-1 rounded mb-4 hover:bg-stone-200 text-sm">Atualizar Gráfico</button>
+                    
+                    <div class="chart-container">
+                        <canvas id="interestChart"></canvas>
+                    </div>
+                    <p class="text-xs text-stone-400 mt-2 text-center">Note como a curva composta se afasta da reta simples com o tempo.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: FUNÇÕES -->
+        <section id="sec-funcoes" class="hidden space-y-6">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-stone-800">Funções do 2º Grau</h2>
+                <p class="text-stone-500">Entenda a parábola, seus coeficientes e a função lucro.</p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Controls -->
+                <div class="w-full lg:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                    <h3 class="font-bold text-lg mb-4 text-amber-600">Explorador de Coeficientes</h3>
+                    <p class="text-sm text-stone-500 mb-6">Altere os valores para ver como $f(x) = ax^2 + bx + c$ se comporta.</p>
+
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-sm font-semibold">a (Concavidade)</label>
+                                <span id="val-a" class="text-sm font-mono bg-stone-100 px-2 rounded">1</span>
+                            </div>
+                            <input type="range" id="input-a" min="-5" max="5" step="0.5" value="1" class="w-full accent-amber-600" oninput="updateQuadratic()">
+                            <p class="text-xs text-stone-400 mt-1" id="desc-a">Positivo: Sorriso (Mínimo).</p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-sm font-semibold">b (Inclinação em Y)</label>
+                                <span id="val-b" class="text-sm font-mono bg-stone-100 px-2 rounded">0</span>
+                            </div>
+                            <input type="range" id="input-b" min="-10" max="10" step="1" value="0" class="w-full accent-stone-600" oninput="updateQuadratic()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-sm font-semibold">c (Corte em Y)</label>
+                                <span id="val-c" class="text-sm font-mono bg-stone-100 px-2 rounded">0</span>
+                            </div>
+                            <input type="range" id="input-c" min="-10" max="10" step="1" value="0" class="w-full accent-stone-600" oninput="updateQuadratic()">
+                        </div>
+                    </div>
+
+                    <div class="mt-8 bg-stone-50 p-4 rounded-lg border border-stone-200">
+                        <h4 class="font-bold text-stone-700 mb-2">Análise Automática:</h4>
+                        <ul class="text-sm space-y-1 text-stone-600">
+                            <li><strong>Vértice ($V$):</strong> <span id="res-vertex">(0, 0)</span></li>
+                            <li><strong>Tipo:</strong> <span id="res-type">Ponto de Mínimo</span></li>
+                            <li><strong>Delta ($\Delta$):</strong> <span id="res-delta">0</span></li>
+                            <li><strong>Raízes:</strong> <span id="res-roots">0</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Visualizer -->
+                <div class="w-full lg:w-2/3 bg-white p-6 rounded-xl shadow-sm border border-stone-100 flex flex-col items-center justify-center">
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="quadraticChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-amber-50 border border-amber-100 p-6 rounded-xl">
+                <h3 class="font-bold text-amber-800 mb-2">Aplicação: Função Lucro</h3>
+                <p class="text-amber-900 text-sm mb-4">Lembre-se: $L(x) = R(x) - C(x)$. O lucro máximo ocorre no $Y_v$ e a quantidade ideal no $X_v$.</p>
+                <div class="flex gap-4 flex-wrap">
+                    <div class="bg-white px-4 py-2 rounded shadow-sm">
+                        <span class="text-xs text-stone-500 block">Quantidade para Lucro Máximo ($X_v$)</span>
+                        <span class="font-mono text-stone-800">$X_v = -b / 2a$</span>
+                    </div>
+                    <div class="bg-white px-4 py-2 rounded shadow-sm">
+                        <span class="text-xs text-stone-500 block">Valor do Lucro Máximo ($Y_v$)</span>
+                        <span class="font-mono text-stone-800">$Y_v = -\Delta / 4a$</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: POLINÔMIOS -->
+        <section id="sec-polinomios" class="hidden space-y-6">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-stone-800">Polinômios & Briot-Ruffini</h2>
+                <p class="text-stone-500">Pratique a redução de grau para encontrar raízes de equações de grau 3 ou superior.</p>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-stone-100">
+                <h3 class="font-bold text-lg mb-6 text-emerald-600">Simulador de Briot-Ruffini</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-2">Polinômio (Coeficientes)</label>
+                        <p class="text-xs text-stone-400 mb-2">Digite os coeficientes separados por vírgula (Ex: para $x^3 - 5x^2 + 6$, digite: 1, -5, 0, 6)</p>
+                        <input type="text" id="poly-coefs" value="1, -5, 6" class="w-full p-3 border rounded-lg font-mono focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: 1, -5, 6">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-stone-700 mb-2">Raiz Conhecida ($a$)</label>
+                        <p class="text-xs text-stone-400 mb-2">Valor que divide o polinômio (divisor $x - a$)</p>
+                        <input type="number" id="poly-root" value="2" class="w-full p-3 border rounded-lg font-mono focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <button onclick="calcBriotRuffini()" class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition mb-6 font-semibold">Calcular Divisão</button>
+
+                <!-- Visual Grid for Briot Ruffini -->
+                <div id="br-result-container" class="hidden">
+                    <h4 class="font-bold text-stone-700 mb-4">Passo a Passo:</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <tbody>
+                                <tr id="br-row-top" class="text-center text-stone-500 text-sm">
+                                    <!-- Dynamic content -->
+                                </tr>
+                                <tr class="border-b-2 border-stone-800">
+                                    <td class="p-3 font-bold text-emerald-600 border-r-2 border-stone-800 w-16 text-center text-xl" id="br-root-display">2</td>
+                                    <td colspan="10" class="p-0">
+                                        <div id="br-coefs-display" class="flex justify-start space-x-8 px-4 py-3 font-mono text-lg text-stone-800">
+                                            <!-- Coefs go here -->
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="border-r-2 border-stone-800"></td>
+                                    <td colspan="10">
+                                        <div id="br-result-display" class="flex justify-start space-x-8 px-4 py-3 font-mono text-lg font-bold text-stone-800">
+                                            <!-- Results go here -->
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-stone-50 rounded-lg border border-stone-200">
+                        <p id="br-interpretation" class="text-stone-700 font-mono"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: GEOMETRIA -->
+        <section id="sec-geometria" class="hidden space-y-6">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-stone-800">Geometria Plana</h2>
+                <p class="text-stone-500">Calculadora de áreas e fórmulas essenciais.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Shape Selector -->
+                <div class="col-span-1 space-y-2">
+                    <button onclick="selectShape('triangle')" class="w-full text-left p-4 rounded-lg bg-white border border-stone-200 hover:border-purple-500 hover:shadow-sm transition flex items-center gap-3">
+                        <span class="text-2xl">▲</span>
+                        <div>
+                            <span class="font-bold block text-stone-700">Triângulo</span>
+                            <span class="text-xs text-stone-400">Heron & Base/Altura</span>
+                        </div>
+                    </button>
+                    <button onclick="selectShape('circle')" class="w-full text-left p-4 rounded-lg bg-white border border-stone-200 hover:border-purple-500 hover:shadow-sm transition flex items-center gap-3">
+                        <span class="text-2xl">●</span>
+                        <div>
+                            <span class="font-bold block text-stone-700">Círculo</span>
+                            <span class="text-xs text-stone-400">Completo & Setor</span>
+                        </div>
+                    </button>
+                    <button onclick="selectShape('trapezoid')" class="w-full text-left p-4 rounded-lg bg-white border border-stone-200 hover:border-purple-500 hover:shadow-sm transition flex items-center gap-3">
+                        <span class="text-2xl">⏢</span>
+                        <div>
+                            <span class="font-bold block text-stone-700">Trapézio</span>
+                            <span class="text-xs text-stone-400">Bases & Altura</span>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Calculation Area -->
+                <div class="col-span-1 md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                    <div id="shape-triangle" class="shape-panel">
+                        <h3 class="text-xl font-bold text-purple-600 mb-4">Área do Triângulo (Heron)</h3>
+                        <p class="text-sm text-stone-500 mb-4">Use quando souber os 3 lados ($a, b, c$). $p$ é o semiperímetro.</p>
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <input type="number" id="tri-a" placeholder="Lado A" class="p-2 border rounded">
+                            <input type="number" id="tri-b" placeholder="Lado B" class="p-2 border rounded">
+                            <input type="number" id="tri-c" placeholder="Lado C" class="p-2 border rounded">
+                        </div>
+                        <button onclick="calcTriangle()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Calcular Área</button>
+                        <div class="mt-4 p-4 bg-purple-50 rounded text-purple-900">
+                            <p class="font-mono text-lg" id="tri-result">Área = ...</p>
+                        </div>
+                    </div>
+
+                    <div id="shape-circle" class="shape-panel hidden">
+                        <h3 class="text-xl font-bold text-purple-600 mb-4">Círculo e Setor</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <input type="number" id="circ-r" placeholder="Raio (r)" class="p-2 border rounded">
+                            <input type="number" id="circ-angle" placeholder="Ângulo (graus) - Opcional" class="p-2 border rounded">
+                        </div>
+                        <button onclick="calcCircle()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Calcular</button>
+                        <div class="mt-4 p-4 bg-purple-50 rounded text-purple-900">
+                            <p class="font-mono text-lg" id="circ-result">Área = ...</p>
+                            <p class="text-xs mt-2 text-purple-700">Se o ângulo for 360 ou vazio, calcula o círculo completo.</p>
+                        </div>
+                    </div>
+
+                    <div id="shape-trapezoid" class="shape-panel hidden">
+                        <h3 class="text-xl font-bold text-purple-600 mb-4">Área do Trapézio</h3>
+                        <p class="text-sm text-stone-500 mb-4">$A = \frac{(B + b) \cdot h}{2}$</p>
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <input type="number" id="trap-B" placeholder="Base Maior (B)" class="p-2 border rounded">
+                            <input type="number" id="trap-b" placeholder="Base Menor (b)" class="p-2 border rounded">
+                            <input type="number" id="trap-h" placeholder="Altura (h)" class="p-2 border rounded">
+                        </div>
+                        <button onclick="calcTrapezoid()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Calcular</button>
+                        <div class="mt-4 p-4 bg-purple-50 rounded text-purple-900">
+                            <p class="font-mono text-lg" id="trap-result">Área = ...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- NAVIGATION STATE ---
+        const sections = ['home', 'financeira', 'funcoes', 'polinomios', 'geometria'];
+        
+        function switchTab(tabId) {
+            // Mobile Menu Close
+            document.getElementById('mobile-menu').classList.add('hidden');
+
+            // Hide all sections
+            sections.forEach(sec => {
+                document.getElementById(`sec-${sec}`).classList.add('hidden');
+                // Update Desktop Sidebar Buttons
+                const btn = document.getElementById(`btn-${sec}`);
+                if (btn) {
+                    btn.classList.remove('tab-active');
+                    btn.classList.add('tab-inactive');
+                }
+            });
+
+            // Show active section
+            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('tab-inactive');
+                activeBtn.classList.add('tab-active');
+            }
+
+            // Render Charts if necessary (lazy load)
+            if (tabId === 'financeira') updateInterestChart();
+            if (tabId === 'funcoes') updateQuadratic();
+        }
+
+        // Mobile Menu Toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+
+        // --- FINANCIAL MATH LOGIC ---
+        let variations = [];
+
+        function addVariation() {
+            const valInput = document.getElementById('fin-value');
+            const typeInput = document.getElementById('fin-type');
+            const percInput = document.getElementById('fin-percent');
+
+            let initialValue = parseFloat(valInput.value);
+            if (isNaN(initialValue) || initialValue <= 0) {
+                alert("Por favor, insira um valor inicial válido.");
+                return;
+            }
+
+            const perc = parseFloat(percInput.value);
+            if (isNaN(perc)) return;
+
+            variations.push({ type: typeInput.value, value: perc });
+            renderVariations(initialValue);
+            percInput.value = '';
+        }
+
+        function renderVariations(initialValue) {
+            const listEl = document.getElementById('variation-list');
+            const resValEl = document.getElementById('fin-result-val');
+            const resPercEl = document.getElementById('fin-result-perc');
+
+            listEl.innerHTML = '';
+            let currentVal = initialValue;
+            let factorTotal = 1;
+
+            if (variations.length === 0) {
+                listEl.innerHTML = '<p class="text-stone-400 italic">Nenhuma variação adicionada.</p>';
+                resValEl.textContent = `R$ ${initialValue.toFixed(2)}`;
+                resPercEl.textContent = "0%";
+                return;
+            }
+
+            variations.forEach((v, index) => {
+                const factor = v.type === 'increase' ? (1 + v.value/100) : (1 - v.value/100);
+                const prevVal = currentVal;
+                currentVal = currentVal * factor;
+                factorTotal = factorTotal * factor;
+
+                const sign = v.type === 'increase' ? '+' : '-';
+                const color = v.type === 'increase' ? 'text-green-600' : 'text-red-600';
+
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-white p-2 rounded border border-stone-200";
+                item.innerHTML = `
+                    <span class="${color} font-mono font-bold">${index + 1}. ${sign}${v.value}%</span>
+                    <span class="text-xs text-stone-500">R$ ${prevVal.toFixed(2)} ➝ R$ ${currentVal.toFixed(2)}</span>
+                `;
+                listEl.appendChild(item);
+            });
+
+            resValEl.textContent = `R$ ${currentVal.toFixed(2)}`;
+            
+            // Calculate Total Effective Percentage
+            const totalChange = ((currentVal - initialValue) / initialValue) * 100;
+            const signTotal = totalChange >= 0 ? '+' : '';
+            resPercEl.textContent = `${signTotal}${totalChange.toFixed(2)}%`;
+        }
+
+        function resetFinance() {
+            variations = [];
+            const valInput = document.getElementById('fin-value');
+            if(valInput.value) renderVariations(parseFloat(valInput.value));
+            else renderVariations(0);
+        }
+
+        // --- CHART: INTEREST COMPARISON ---
+        let interestChartInstance = null;
+
+        function updateInterestChart() {
+            const cap = parseFloat(document.getElementById('chart-cap').value) || 1000;
+            const rate = parseFloat(document.getElementById('chart-rate').value) || 10;
+            const time = parseInt(document.getElementById('chart-time').value) || 12;
+
+            const labels = [];
+            const dataSimple = [];
+            const dataCompound = [];
+
+            for(let t=0; t<=time; t++) {
+                labels.push(t);
+                // Simple: M = C * (1 + i*t)
+                dataSimple.push(cap * (1 + (rate/100)*t));
+                // Compound: M = C * (1 + i)^t
+                dataCompound.push(cap * Math.pow((1 + rate/100), t));
+            }
+
+            const ctx = document.getElementById('interestChart').getContext('2d');
+            
+            if (interestChartInstance) interestChartInstance.destroy();
+
+            interestChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Juros Simples (Linear)',
+                            data: dataSimple,
+                            borderColor: '#78716c', // Stone 500
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0
+                        },
+                        {
+                            label: 'Juros Compostos (Exponencial)',
+                            data: dataCompound,
+                            borderColor: '#d97706', // Amber 600
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': R$ ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: '#f5f5f4' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            title: { display: true, text: 'Tempo (Meses)' }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // --- FUNCTIONS LOGIC (QUADRATIC) ---
+        let quadraticChartInstance = null;
+
+        function updateQuadratic() {
+            const a = parseFloat(document.getElementById('input-a').value);
+            const b = parseFloat(document.getElementById('input-b').value);
+            const c = parseFloat(document.getElementById('input-c').value);
+
+            // Update Labels
+            document.getElementById('val-a').innerText = a;
+            document.getElementById('val-b').innerText = b;
+            document.getElementById('val-c').innerText = c;
+            
+            // Textual Analysis
+            const delta = (b * b) - (4 * a * c);
+            const xv = -b / (2 * a);
+            const yv = -delta / (4 * a);
+            
+            document.getElementById('desc-a').innerText = a > 0 ? "Positivo: Sorriso (Mínimo)" : "Negativo: Triste (Máximo)";
+            document.getElementById('res-vertex').innerText = `(${xv.toFixed(2)}, ${yv.toFixed(2)})`;
+            document.getElementById('res-type').innerText = a > 0 ? "Ponto de Mínimo" : "Ponto de Máximo";
+            document.getElementById('res-delta').innerText = delta.toFixed(2);
+            
+            let rootsText = "";
+            if (delta > 0) {
+                const x1 = (-b + Math.sqrt(delta)) / (2*a);
+                const x2 = (-b - Math.sqrt(delta)) / (2*a);
+                rootsText = `${x1.toFixed(2)} e ${x2.toFixed(2)}`;
+            } else if (delta === 0) {
+                rootsText = `${xv.toFixed(2)} (Raiz Dupla)`;
+            } else {
+                rootsText = "Sem raízes reais";
+            }
+            document.getElementById('res-roots').innerText = rootsText;
+
+            // Generate Chart Data
+            const xValues = [];
+            const yValues = [];
+            
+            // Dynamic range around vertex
+            const range = 10;
+            const startX = xv - range;
+            const endX = xv + range;
+
+            for (let x = startX; x <= endX; x += 0.5) {
+                xValues.push(x.toFixed(1));
+                yValues.push((a * x * x) + (b * x) + c);
+            }
+
+            const ctx = document.getElementById('quadraticChart').getContext('2d');
+            if (quadraticChartInstance) quadraticChartInstance.destroy();
+
+            quadraticChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: `f(x) = ${a}x² + ${b}x + ${c}`,
+                        data: yValues,
+                        borderColor: '#2563eb', // Blue 600
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Vértice',
+                        data: xValues.map(x => parseFloat(x) === parseFloat(xv.toFixed(1)) ? yv : null), // Simple approximation for visualizing point
+                        pointRadius: 6,
+                        pointBackgroundColor: '#dc2626',
+                        showLine: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            grid: { color: (ctx) => ctx.tick.value === 0 ? '#000' : '#e5e7eb', lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1 }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true }
+                    }
+                }
+            });
+        }
+
+
+        // --- POLYNOMIALS (BRIOT RUFFINI) ---
+        function calcBriotRuffini() {
+            const coefsStr = document.getElementById('poly-coefs').value;
+            const root = parseFloat(document.getElementById('poly-root').value);
+            
+            if (!coefsStr) return;
+
+            const coefs = coefsStr.split(',').map(n => parseFloat(n.trim()));
+            if (coefs.some(isNaN) || isNaN(root)) {
+                alert("Verifique os números inseridos.");
+                return;
+            }
+
+            // Calculation
+            const results = [];
+            let currentVal = coefs[0];
+            results.push(currentVal);
+
+            for (let i = 1; i < coefs.length; i++) {
+                currentVal = (currentVal * root) + coefs[i];
+                results.push(currentVal);
+            }
+
+            const remainder = results[results.length - 1];
+            const quotientCoefs = results.slice(0, results.length - 1);
+
+            // Display
+            document.getElementById('br-result-container').classList.remove('hidden');
+            document.getElementById('br-root-display').innerText = root;
+            
+            // Build Coefs HTML (Top Row)
+            document.getElementById('br-coefs-display').innerHTML = coefs.map(c => `<div class="w-12 text-center">${c}</div>`).join('');
+            
+            // Build Results HTML (Bottom Row)
+            // Add styling to distinguish remainder
+            const resultHTML = results.map((r, i) => {
+                const isRemainder = i === results.length - 1;
+                const style = isRemainder ? 'text-red-600 border-2 border-red-200 rounded bg-red-50' : 'text-emerald-700';
+                return `<div class="w-12 text-center ${style}">${r}</div>`;
+            }).join('');
+            document.getElementById('br-result-display').innerHTML = resultHTML;
+
+            // Interpretation Text
+            let polyText = "Q(x) = ";
+            let degree = quotientCoefs.length - 1;
+            quotientCoefs.forEach((c, i) => {
+                if (c === 0) return; // skip zero terms
+                const deg = degree - i;
+                const sign = (c > 0 && i > 0) ? " + " : " ";
+                const xPart = deg === 0 ? "" : (deg === 1 ? "x" : `x^${deg}`);
+                polyText += `${sign}${c}${xPart}`;
+            });
+            
+            document.getElementById('br-interpretation').innerHTML = `
+                <strong>Quociente:</strong> ${polyText} <br>
+                <strong>Resto:</strong> ${remainder} <br>
+                ${remainder === 0 ? '<span class="text-green-600 font-bold">✓ Divisão Exata (é raiz!)</span>' : '<span class="text-amber-600">Divisão não exata.</span>'}
+            `;
+        }
+
+
+        // --- GEOMETRY LOGIC ---
+        function selectShape(shape) {
+            document.querySelectorAll('.shape-panel').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`shape-${shape}`).classList.remove('hidden');
+        }
+
+        function calcTriangle() {
+            const a = parseFloat(document.getElementById('tri-a').value);
+            const b = parseFloat(document.getElementById('tri-b').value);
+            const c = parseFloat(document.getElementById('tri-c').value);
+
+            if (isNaN(a) || isNaN(b) || isNaN(c)) return;
+
+            // Heron
+            const p = (a + b + c) / 2;
+            const area = Math.sqrt(p * (p - a) * (p - b) * (p - c));
+            
+            const resEl = document.getElementById('tri-result');
+            if (isNaN(area) || area <= 0) {
+                resEl.innerText = "Triângulo impossível (lados inválidos)";
+                resEl.classList.add('text-red-500');
+            } else {
+                resEl.innerText = `Área ≈ ${area.toFixed(2)}`;
+                resEl.classList.remove('text-red-500');
+            }
+        }
+
+        function calcCircle() {
+            const r = parseFloat(document.getElementById('circ-r').value);
+            const ang = parseFloat(document.getElementById('circ-angle').value);
+
+            if (isNaN(r)) return;
+
+            let area = Math.PI * r * r;
+            let type = "Círculo Completo";
+
+            if (!isNaN(ang) && ang > 0 && ang < 360) {
+                area = (ang / 360) * area;
+                type = `Setor de ${ang}°`;
+            }
+
+            document.getElementById('circ-result').innerText = `${type}: Área ≈ ${area.toFixed(2)}`;
+        }
+
+        function calcTrapezoid() {
+            const B = parseFloat(document.getElementById('trap-B').value);
+            const b = parseFloat(document.getElementById('trap-b').value);
+            const h = parseFloat(document.getElementById('trap-h').value);
+
+            if (isNaN(B) || isNaN(b) || isNaN(h)) return;
+
+            const area = ((B + b) * h) / 2;
+            document.getElementById('trap-result').innerText = `Área = ${area.toFixed(2)}`;
+        }
+
+    </script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
